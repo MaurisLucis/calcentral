@@ -92,18 +92,31 @@ module EdoOracle
     def self.get_batch_enrollments(term_id, batch_number, batch_size)
       mininum_row_exclusive = (batch_number * batch_size)
       maximum_row_inclusive = mininum_row_exclusive + batch_size
+      # Dealing with late withdrawals for secondary sections (the long CASE clause) almost quadruples
+      # the query's time.
+      # TODO Restructure code to avoid secondary-section fetches for primary-section enrollments with GRADE_MARK 'W'.
       sql = <<-SQL
         SELECT * FROM (
           SELECT /*+ FIRST_ROWS(n) */ enrollments.*, ROWNUM rnum FROM (
             SELECT DISTINCT
-              enroll."CLASS_SECTION_ID" as section_id,
-              enroll."CAMPUS_UID" AS ldap_uid,
-              enroll."STUDENT_ID" AS sis_id
+              enroll.CLASS_SECTION_ID as section_id,
+              enroll.CAMPUS_UID AS ldap_uid,
+              enroll.STUDENT_ID AS sis_id
             FROM SISEDO.ETS_ENROLLMENTV00_VW enroll
             WHERE
-              enroll."TERM_ID" = '#{term_id}'
-              AND enroll."STDNT_ENRL_STATUS_CODE" = 'E'
-              AND enroll."GRADE_MARK" != 'W'
+              enroll.TERM_ID = '#{term_id}'
+              AND enroll.STDNT_ENRL_STATUS_CODE = 'E'
+              AND CASE enroll.GRADING_BASIS_CODE 
+                WHEN 'NON' THEN (
+                  SELECT prim_enr.GRADE_MARK
+                    FROM SISEDO.CLASSSECTIONALLV01_MVW sec
+                    LEFT JOIN SISEDO.ETS_ENROLLMENTV00_VW prim_enr
+                      ON  prim_enr.CLASS_SECTION_ID = sec."primaryAssociatedSectionId"
+                      AND prim_enr.TERM_ID = enroll.TERM_ID
+                      AND prim_enr.STUDENT_ID = enroll.STUDENT_ID
+                    WHERE sec."id" = enroll.CLASS_SECTION_ID AND sec."term-id" = enroll.TERM_ID AND ROWNUM=1
+                )
+              ELSE enroll.GRADE_MARK END != 'W'
             ORDER BY section_id, sis_id
           ) enrollments
           WHERE ROWNUM <= #{maximum_row_inclusive}
