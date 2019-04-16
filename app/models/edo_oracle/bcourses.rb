@@ -3,20 +3,32 @@ module EdoOracle
     include ActiveRecordHelper
 
     def self.get_enrolled_students(section_id, term_id)
+      # Late withdrawals are only indicated in primary section enrollments, and do not change
+      # any values in secondary section enrollment rows. The CASE clause implements a
+      # conditional join for secondary sections.
       fallible_query <<-SQL
         SELECT DISTINCT
-          enroll."CAMPUS_UID" AS ldap_uid,
-          enroll."STUDENT_ID" AS student_id,
-          enroll."STDNT_ENRL_STATUS_CODE" AS enroll_status,
-          enroll."WAITLISTPOSITION" AS waitlist_position,
-          enroll."UNITS_TAKEN" AS units,
-          TRIM(enroll."GRADING_BASIS_CODE") AS grading_basis
-        FROM SISEDO.ETS_ENROLLMENTV00_VW enroll
-        WHERE
-          enroll."CLASS_SECTION_ID" = '#{section_id}'
-          AND enroll."TERM_ID" = '#{term_id}'
-          AND enroll."STDNT_ENRL_STATUS_CODE" != 'D'
-          AND enroll."GRADE_MARK" != 'W'
+          enroll.CAMPUS_UID AS ldap_uid,
+          enroll.STUDENT_ID AS student_id,
+          enroll.STDNT_ENRL_STATUS_CODE AS enroll_status,
+          enroll.WAITLISTPOSITION AS waitlist_position,
+          enroll.UNITS_TAKEN AS units,
+          TRIM(enroll.GRADING_BASIS_CODE) AS grading_basis
+        FROM SISEDO.ETS_ENROLLMENTV00_VW enroll 
+        WHERE enroll.CLASS_SECTION_ID = '#{section_id}'
+          AND enroll.TERM_ID = '#{term_id}'
+          AND enroll.STDNT_ENRL_STATUS_CODE != 'D'
+          AND CASE enroll.GRADING_BASIS_CODE WHEN 'NON' THEN (
+            SELECT prim_enr.GRADE_MARK
+              FROM SISEDO.CLASSSECTIONALLV01_MVW sec
+            LEFT JOIN SISEDO.ETS_ENROLLMENTV00_VW prim_enr
+              ON  prim_enr.CLASS_SECTION_ID = sec."primaryAssociatedSectionId"
+              AND prim_enr.TERM_ID = enroll.TERM_ID
+              AND prim_enr.STUDENT_ID = enroll.STUDENT_ID
+              WHERE sec."id" = enroll.CLASS_SECTION_ID AND sec."term-id" = enroll.TERM_ID
+            )
+            ELSE enroll.GRADE_MARK END != 'W'
+          ORDER BY enroll.CAMPUS_UID
       SQL
     end
 
