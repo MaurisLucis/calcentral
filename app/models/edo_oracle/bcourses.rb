@@ -19,13 +19,14 @@ module EdoOracle
           AND enroll.TERM_ID = '#{term_id}'
           AND enroll.STDNT_ENRL_STATUS_CODE != 'D'
           AND CASE enroll.GRADING_BASIS_CODE WHEN 'NON' THEN (
-            SELECT prim_enr.GRADE_MARK
+            SELECT DISTINCT prim_enr.GRADE_MARK
               FROM SISEDO.CLASSSECTIONALLV01_MVW sec
             LEFT JOIN SISEDO.ETS_ENROLLMENTV00_VW prim_enr
               ON  prim_enr.CLASS_SECTION_ID = sec."primaryAssociatedSectionId"
               AND prim_enr.TERM_ID = enroll.TERM_ID
               AND prim_enr.STUDENT_ID = enroll.STUDENT_ID
-              WHERE sec."id" = enroll.CLASS_SECTION_ID AND sec."term-id" = enroll.TERM_ID AND ROWNUM=1
+            WHERE sec."id" = enroll.CLASS_SECTION_ID AND sec."term-id" = enroll.TERM_ID
+              AND prim_enr.STUDENT_ID IS NOT NULL
             )
             ELSE enroll.GRADE_MARK END != 'W'
           ORDER BY enroll.CAMPUS_UID
