@@ -25,7 +25,7 @@ module EdoOracle
               ON  prim_enr.CLASS_SECTION_ID = sec."primaryAssociatedSectionId"
               AND prim_enr.TERM_ID = enroll.TERM_ID
               AND prim_enr.STUDENT_ID = enroll.STUDENT_ID
-              WHERE sec."id" = enroll.CLASS_SECTION_ID AND sec."term-id" = enroll.TERM_ID
+              WHERE sec."id" = enroll.CLASS_SECTION_ID AND sec."term-id" = enroll.TERM_ID AND ROWNUM=1
             )
             ELSE enroll.GRADE_MARK END != 'W'
           ORDER BY enroll.CAMPUS_UID
