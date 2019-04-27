@@ -25,6 +25,7 @@ module EdoOracle
               ON  prim_enr.CLASS_SECTION_ID = sec."primaryAssociatedSectionId"
               AND prim_enr.TERM_ID = enroll.TERM_ID
               AND prim_enr.STUDENT_ID = enroll.STUDENT_ID
+              AND prim_enr.STDNT_ENRL_STATUS_CODE != 'D'
             WHERE sec."id" = enroll.CLASS_SECTION_ID AND sec."term-id" = enroll.TERM_ID
               AND prim_enr.STUDENT_ID IS NOT NULL
             )
