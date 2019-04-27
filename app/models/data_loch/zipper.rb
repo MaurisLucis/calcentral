@@ -17,11 +17,16 @@ module DataLoch
       path = staging_path "#{base_path}.gz"
       batch = 0
       Zlib::GzipWriter.open(path) do |gz|
-        result = yield(batch, BATCH_SIZE)
-        zip_query_results(result, gz)
-        # If we receive fewer rows than the batch size, we've read all available rows and are done.
-        break if result.rows.count < BATCH_SIZE
-        batch += 1
+        loop do
+          result = yield(batch, BATCH_SIZE)
+          zip_query_results(result, gz)
+          # If we receive fewer rows than the batch size, we've read all available rows and are done.
+          if result.rows.count < BATCH_SIZE
+            Rails.logger.warn "On batch #{batch}, received only #{result.rows.count} rows"
+            break
+          end
+          batch += 1
+        end
       end
       path
     end
@@ -43,7 +48,7 @@ module DataLoch
 
     # Cast BigDecimals and suchlike to integers.
     def self.intified_cols
-      %w(sid parent_income test_score_nbr applied_school_yr)
+      %w(sid section_id parent_income test_score_nbr applied_school_yr)
     end
 
     def self.staging_path(basename)
