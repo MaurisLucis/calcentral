@@ -29,8 +29,6 @@ module DataLoch
         parent_path = get_daily_path
       end
       Rails.logger.warn "Starting #{data_type} course and enrollment data snapshot for term ids #{term_ids}, targets #{s3_targets}."
-      Rails.logger.warn 'Disabling slow query logger for this task.'
-      ActiveSupport::Notifications.unsubscribe 'sql.active_record'
       s3s = s3_from_names s3_targets
       term_ids.each do |term_id|
         Rails.logger.info "Starting snapshots for term #{term_id}."
