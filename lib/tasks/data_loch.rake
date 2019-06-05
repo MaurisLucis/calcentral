@@ -44,4 +44,9 @@ namespace :data_loch do
     DataLoch::Stocker.new().upload_advising_notes_data(s3_targets, ['notes', 'note-attachments'])
   end
 
+  desc 'Check access to Data Loch S3'
+  task :verify => :environment do
+    DataLoch::Stocker.new().verify_endpoints(s3_targets)
+  end
+
 end
