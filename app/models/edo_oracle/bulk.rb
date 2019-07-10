@@ -196,7 +196,7 @@ module EdoOracle
 
     def self.get_instructor_advisor_relationships()
       sql = <<-SQL
-        SELECT 
+        SELECT DISTINCT
           I.ADVISOR_ID,
           I.CAMPUS_ID,
           I.INSTRUCTOR_ADISOR_NUMBER AS INSTRUCTOR_ADVISOR_NBR,
@@ -226,7 +226,7 @@ module EdoOracle
 
     def self.get_student_advisor_relationships()
       sql = <<-SQL
-        SELECT 
+        SELECT DISTINCT
           S.STUDENT_ID,
           S.CAMPUS_ID,
           S.ADVISOR_ID,
@@ -263,8 +263,8 @@ module EdoOracle
           ACADPLAN_TYPE_CODE,
           ACADPLAN_TYPE_DESCR,
           ACADPLAN_OWNEDBY_CODE, 
-          ACADPLAN_OWNEDBY_DESCR
-          ACADPLAN_OWNED_BY_PCT,
+          ACADPLAN_OWNEDBY_DESCR,
+          ACADPLAN_OWNEDBY_PCT,
           ACADPROG_CODE,
           ACADPROG_DESCR
         FROM SISEDO.STUDENT_PLANV01_VW
