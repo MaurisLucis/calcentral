@@ -58,6 +58,16 @@ module DataLoch
       logger.info "L&S snapshot complete at #{l_and_s_path}."
     end
 
+    def upload_undergrads(s3_targets)
+      logger.warn "Starting active undergrads snapshot, targets #{s3_targets}."
+      s3s = s3_from_names s3_targets
+      undergrads_path = DataLoch::Zipper.zip_query "undergrads" do
+        EdoOracle::Bulk.get_active_undergrads
+      end
+      s3s.each {|s3| s3.upload("undergrads", undergrads_path) }
+      logger.info "Undergrads snapshot complete at #{undergrads_path}."
+    end
+
     def upload_term_data(term_ids, s3_targets, is_historical=false)
       if is_historical
         data_type = 'historical'

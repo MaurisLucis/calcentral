@@ -123,6 +123,19 @@ module EdoOracle
       safe_query(sql, do_not_stringify: true)
     end
 
+    def self.get_active_undergrads
+      sql = <<-SQL
+        SELECT DISTINCT
+          pl.STUDENT_ID as sid, 
+          pl.ACADPROG_CODE, pl.ACADPROG_DESCR,
+          pl.ACADPLAN_CODE, pl.ACADPLAN_DESCR, pl.ACADPLAN_TYPE_CODE, pl.ACADPLAN_OWNEDBY_CODE
+        FROM SISEDO.student_planv01_vw pl
+        WHERE pl.ACADCAREER_CODE='UGRD' AND pl.STATUSINPLAN_STATUS_CODE='AC'
+        ORDER BY pl.STUDENT_ID, pl.ACADPROG_CODE, pl.ACADPLAN_CODE
+      SQL
+      safe_query(sql, do_not_stringify: true)
+    end
+
     def self.get_demographics(advisee_sids)
       batched_sids = advisee_sids.each_slice(1000).to_a
       full_sql = ''
