@@ -124,13 +124,15 @@ module EdoOracle
     end
 
     def self.get_active_undergrads
+      # "Minor" plan rows oddly contain the ACADPROG_CODE " " even though they keep the "Major" rows'
+      # ACADPROG_DESCR, and so we filter them out.
       sql = <<-SQL
         SELECT DISTINCT
           pl.STUDENT_ID as sid, 
           pl.ACADPROG_CODE, pl.ACADPROG_DESCR,
           pl.ACADPLAN_CODE, pl.ACADPLAN_DESCR, pl.ACADPLAN_TYPE_CODE, pl.ACADPLAN_OWNEDBY_CODE
         FROM SISEDO.student_planv01_vw pl
-        WHERE pl.ACADCAREER_CODE='UGRD' AND pl.STATUSINPLAN_STATUS_CODE='AC'
+        WHERE pl.ACADCAREER_CODE='UGRD' AND pl.STATUSINPLAN_STATUS_CODE='AC' AND pl.ACADPLAN_TYPE_CODE != 'MIN'
         ORDER BY pl.STUDENT_ID, pl.ACADPROG_CODE, pl.ACADPLAN_CODE
       SQL
       safe_query(sql, do_not_stringify: true)
