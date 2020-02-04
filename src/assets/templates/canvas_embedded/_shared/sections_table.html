@@ -19,7 +19,7 @@
         <td class="bc-template-sections-table-cell-checkbox" data-ng-if="listMode === 'createCourseForm'">
           <input type="checkbox"
             id="cc-template-canvas-manage-sections-checkbox-{{section.ccn}}"
-            data-ng-model="section.selected" data-ng-click="updateSelected()" aria-label="Checkbox for {{section.courseCode}} {{section.section_label}}"
+            data-ng-model="section.selected" data-ng-change="updateSelected()" aria-label="Checkbox for {{section.courseCode}} {{section.section_label}}"
             aria-checked="{{section.selected}}">
         </td>
         <td class="bc-template-sections-table-cell-course-code">
