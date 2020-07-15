@@ -379,7 +379,7 @@ module EdoOracle
         WHERE
           enroll."CLASS_SECTION_ID" = '#{section_id}'
           AND enroll."TERM_ID" = '#{term_id}'
-          AND enroll."STDNT_ENRL_STATUS_CODE" != 'D'
+          AND #{omit_drops_and_withdrawals}
       SQL
     end
 
@@ -419,7 +419,7 @@ module EdoOracle
         WHERE
           enroll."CLASS_SECTION_ID" IN ('#{ccns.join "','"}')
           AND enroll."TERM_ID" = '#{term_id}'
-          AND enroll."STDNT_ENRL_STATUS_CODE" != 'D'
+          AND #{omit_drops_and_withdrawals}
       SQL
     end
 
@@ -771,6 +771,36 @@ module EdoOracle
         WHERE STUDENT_ID = '#{student_id}'
       SQL
       result.first
+    end
+
+    def self.omit_drops_and_withdrawals
+      # Our H2 test db can't handle the fancy CASE join below.
+      if Settings.edodb.adapter == 'h2'
+        <<-SQL
+          enroll.STDNT_ENRL_STATUS_CODE != 'D' AND
+          enroll.GRADE_MARK != 'W'
+        SQL
+      # Late withdrawals are only indicated in primary section enrollments, and do not change
+      # any values in secondary section enrollment rows. The CASE clause implements a
+      # conditional join for secondary sections.
+      else
+        <<-SQL
+          enroll.STDNT_ENRL_STATUS_CODE != 'D' AND
+          CASE enroll.GRADING_BASIS_CODE WHEN 'NON' THEN (
+          SELECT DISTINCT prim_enr.GRADE_MARK
+            FROM SISEDO.CLASSSECTIONALLV01_MVW sec
+            LEFT JOIN SISEDO.ETS_ENROLLMENTV01_VW prim_enr
+              ON prim_enr.CLASS_SECTION_ID = sec."primaryAssociatedSectionId"
+              AND prim_enr.TERM_ID = enroll.TERM_ID
+              AND prim_enr.STUDENT_ID = enroll.STUDENT_ID
+              AND prim_enr.STDNT_ENRL_STATUS_CODE != 'D'
+            WHERE sec."id" = enroll.CLASS_SECTION_ID
+              AND sec."term-id" = enroll.TERM_ID
+              AND prim_enr.STUDENT_ID IS NOT NULL
+          )
+          ELSE enroll.GRADE_MARK END != 'W'
+        SQL
+      end
     end
   end
 end

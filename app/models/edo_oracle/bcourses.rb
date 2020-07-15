@@ -14,7 +14,7 @@ module EdoOracle
         FROM SISEDO.ETS_ENROLLMENTV01_VW enroll
         WHERE enroll.CLASS_SECTION_ID = '#{section_id}'
           AND enroll.TERM_ID = '#{term_id}'
-          AND #{omit_drops_and_withdrawals}
+          AND #{EdoOracle::Queries.omit_drops_and_withdrawals}
           ORDER BY enroll.CAMPUS_UID
       SQL
     end
@@ -167,7 +167,7 @@ module EdoOracle
           enroll.LAST_UPDATED as last_updated
         FROM SISEDO.ETS_ENROLLMENTV01_VW enroll
         WHERE enroll.TERM_ID IN (#{term_ids_in})
-        AND #{omit_drops_and_withdrawals}
+        AND #{EdoOracle::Queries.omit_drops_and_withdrawals}
         AND enroll.last_updated >= to_timestamp('#{timestamp_in}', 'yyyy-mm-dd hh24:mi:ss')
         ORDER BY enroll.TERM_ID,
           -- In case the number of results exceeds our processing cutoff, set priority within terms by the academic
@@ -182,36 +182,6 @@ module EdoOracle
           enroll.CLASS_SECTION_ID, enroll.CAMPUS_UID, enroll.last_updated DESC
       SQL
       fallible_query(sql, do_not_stringify: true)
-    end
-
-    def self.omit_drops_and_withdrawals
-      # Our H2 test db can't handle the fancy CASE join below.
-      if Settings.edodb.adapter == 'h2'
-        <<-SQL
-          enroll.STDNT_ENRL_STATUS_CODE != 'D' AND
-          enroll.GRADE_MARK != 'W'
-        SQL
-      # Late withdrawals are only indicated in primary section enrollments, and do not change
-      # any values in secondary section enrollment rows. The CASE clause implements a
-      # conditional join for secondary sections.
-      else
-        <<-SQL
-          enroll.STDNT_ENRL_STATUS_CODE != 'D' AND
-          CASE enroll.GRADING_BASIS_CODE WHEN 'NON' THEN (
-          SELECT DISTINCT prim_enr.GRADE_MARK
-            FROM SISEDO.CLASSSECTIONALLV01_MVW sec
-            LEFT JOIN SISEDO.ETS_ENROLLMENTV01_VW prim_enr
-              ON prim_enr.CLASS_SECTION_ID = sec."primaryAssociatedSectionId"
-              AND prim_enr.TERM_ID = enroll.TERM_ID
-              AND prim_enr.STUDENT_ID = enroll.STUDENT_ID
-              AND prim_enr.STDNT_ENRL_STATUS_CODE != 'D'
-            WHERE sec."id" = enroll.CLASS_SECTION_ID
-              AND sec."term-id" = enroll.TERM_ID
-              AND prim_enr.STUDENT_ID IS NOT NULL
-          )
-          ELSE enroll.GRADE_MARK END != 'W'
-        SQL
-      end
     end
   end
 end
